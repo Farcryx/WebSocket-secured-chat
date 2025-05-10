@@ -51,8 +51,10 @@ def sign_in(username: str, password: str) -> str:
         with open("clients.json", "r") as f:
             users = json.load(f)
             for user in users:
-                if user["username"] == username and user["password"] == hash.sha256(password.encode()).hexdigest():
+                if user["username"] == username and (user["password"] == hash.sha256(password.encode()).hexdigest()):
+                    print(f"SIGNIN_OK: {username}")
                     return f"SIGNIN_OK: {username}"
+            print(f"SIGNIN_FAIL: Invalid credentials.")
             return f"SIGNIN_FAIL: Invalid credentials."
     except Exception as e:
         print(f"SIGNIN_FAIL: {e}")

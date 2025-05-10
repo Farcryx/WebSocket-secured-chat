@@ -1,7 +1,10 @@
 import socket
 from read_credentials import load_server_credentials
-from dh import generate_public_key
+from dh import generate_public_key, diffie_hellman_numbers
 from sign_ip_in import sign_up, sign_in
+
+# Debug flag to enable/disable debug messages
+debug = True
 
 def server_init() -> socket.socket:
     """
@@ -33,23 +36,32 @@ def format_message(message: str, sender: str=None) -> str:
     """
     return f"<From {f'{sender[0]}:{sender[1]}' if sender else 'Server'}> {message}"
 
+def authenticate_client(no_auth_clients: list, list_of_clients: list, sender: str, client_public_key: str, hashed_password: str) -> None:
+    if sender not in list_of_clients:
+        no_auth_clients.append(sender)
+        print(format_message(f"New client {sender} appeared"))
+
+        # Generate Diffie-Hellman keys
+        private_key, public_key = generate_public_key()
+        generator, prime = diffie_hellman_numbers()
+        socket.sendto(format_message(f"{prime}:{generator}:{public_key}").encode(), sender)
+
+    else:
+
+
+        list_of_clients.append(sender)
+        no_auth_clients.remove(sender)
+        print(format_message(f"New client {sender} connected"))
+
 if __name__ == "__main__":
     # Initialize the server
     server_socket = server_init()
     list_of_clients = [] # List to keep track of connected clients
+    no_auth_clients = [] # List to keep track of clients without authentication
     print("- " * 30)
-    i = 3
 
-    if i == 0:
-        username = "admin123"
-        password = "123"
-        # Test to write hashed credentials
-        hashed_password = hash.sha256(password.encode()).hexdigest()
-        sign_up(username, hashed_password)
-        # Test to read hashed credentials
-        # username, hashed_password = read_credentials()
-        print(f"Username: {username}, Hashed Password: {hashed_password}")
-    
+    i = 1
+
     if i == 2:
         # Test to generate Diffie-Hellman public key
         for i in range(1):
@@ -69,6 +81,10 @@ if __name__ == "__main__":
             data, sender = server_socket.recvfrom(1024)
             data_received = data.decode()
 
+            if debug:
+                # Debug the received data and print it
+                print(format_message(f"Received data from {sender}: {data}"))
+
             # Split the received data into components
             parts = data_received.split(":")
             tag = parts[0] if len(parts) > 0 else None
@@ -86,8 +102,7 @@ if __name__ == "__main__":
 
             # Handle the connection request
             if tag == "${CONNECT_TAG}" or tag == "${GREETING_FROM_CLIENT}":
-                list_of_clients.append(sender)
-                print(format_message(f"New client {sender} connected"))
+                authenticate_client(no_auth_clients, list_of_clients, sender, username, password)
                 pass
             # Handle the sign-up request
             elif tag == "${SIGNUP_TAG}":
@@ -107,7 +122,7 @@ if __name__ == "__main__":
                         server_socket.sendto(message_formatted.encode(), client)
 
         except Exception as e:
-            print(format_message("An error occurred."))
+            print(format_message(f"An error occurred. {e}"))
                 
         except KeyboardInterrupt:
             print("\nServer shutting down...")
