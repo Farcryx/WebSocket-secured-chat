@@ -175,3 +175,6 @@ cython_debug/
 
 # MacOS file
 .DS_Store
+
+# Logging credential file
+clients.json

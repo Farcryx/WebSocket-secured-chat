@@ -40,7 +40,7 @@ def sign_up(username: str, password: str) -> str:
         print(f"SIGNUP_FAIL: {e}")
         return f"SIGNUP_FAIL: {e}"
     
-def sign_in(username: str, password: str) -> str:
+def sign_in(username: str, password: str) -> tuple[bool, str]:
     """
     Checks if the provided username and password match the stored credentials.
     Args:
@@ -53,9 +53,9 @@ def sign_in(username: str, password: str) -> str:
             for user in users:
                 if user["username"] == username and (user["password"] == hash.sha256(password.encode()).hexdigest()):
                     print(f"SIGNIN_OK: {username}")
-                    return f"SIGNIN_OK: {username}"
+                    return True, f"SIGNIN_OK: {username}"
             print(f"SIGNIN_FAIL: Invalid credentials.")
-            return f"SIGNIN_FAIL: Invalid credentials."
+            return False, f"SIGNIN_FAIL: Invalid credentials."
     except Exception as e:
         print(f"SIGNIN_FAIL: {e}")
-        return f"SIGNIN_FAIL: {e}"
+        return False, f"SIGNIN_FAIL: {e}"

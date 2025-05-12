@@ -1,10 +1,30 @@
 import socket
 from read_credentials import load_server_credentials
-from dh import generate_public_key, diffie_hellman_numbers
 from sign_ip_in import sign_up, sign_in
+import json
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from AuthenticationManager import AuthenticationManager
+import logging
+from rich.logging import RichHandler
+from rich.console import Console
 
-# Debug flag to enable/disable debug messages
-debug = True
+# Create a rich console
+console = Console()
+
+# Set up logging with rich
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(console=console, rich_tracebacks=True)]
+)
+
+# Create a logger
+logger = logging.getLogger("server_logger")
+
+# Initialize the authentication manager
+auth_manager = AuthenticationManager()
 
 def server_init() -> socket.socket:
     """
@@ -27,6 +47,9 @@ def server_init() -> socket.socket:
         print(f"Error initializing server: {e}")
         exit("Failed to initialize server.")
 
+# Initialize the server socket
+server_socket = server_init()
+
 def format_message(message: str, sender: str=None) -> str:
     """
     Formats the message for display.
@@ -34,97 +57,129 @@ def format_message(message: str, sender: str=None) -> str:
         sender (str): The sender of the message.
         message (str): The message content.
     """
+    logger.debug(f"<From {f'{sender[0]}:{sender[1]}' if sender else 'Server'}> {message}")
     return f"<From {f'{sender[0]}:{sender[1]}' if sender else 'Server'}> {message}"
 
-def authenticate_client(no_auth_clients: list, list_of_clients: list, sender: str, client_public_key: str, hashed_password: str) -> None:
-    if sender not in list_of_clients:
-        no_auth_clients.append(sender)
-        print(format_message(f"New client {sender} appeared"))
+def write_to_json_file(data: dict, filename: str="test.json") -> None:
+    """
+    Writes data to a JSON file.
+    Args:
+        filename (str): The name of the file to write to.
+        data (dict): The data to write to the file.
+    """
+    with open(filename, "w") as f:
+        json.dump(data, f, indent=4)
+        print(f"Data written to {filename}")
+        return
 
-        # Generate Diffie-Hellman keys
-        private_key, public_key = generate_public_key()
-        generator, prime = diffie_hellman_numbers()
-        socket.sendto(format_message(f"{prime}:{generator}:{public_key}").encode(), sender)
+def read_from_json_file(filename: str="test.json") -> dict:
+    """
+    Reads data from a JSON file.
+    Args:
+        filename (str): The name of the file to read from.
+    Returns:
+        dict: The data read from the file.
+    """
+    try:
+        with open(filename, "r") as f:
+            data = json.load(f)
+            print(f"Data read from {filename}")
+            return data
+    except FileNotFoundError:
+        print(f"File {filename} not found.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON from {filename}.")
+        return {}
+    except Exception as e:
+        print(f"Error reading from {filename}: {e}")
+        return {}
 
+def handle_signup_request(sender: str, username: str, password: str) -> None:
+    """Handles the signup request from a client."""
+    message = sign_up(username, password)
+    server_socket.sendto(format_message(message).encode(), sender)
+
+def handle_signin_request(sender: str, username: str, password: str) -> None:
+    """Handles the signin request from a client."""
+    flag, message = sign_in(username, password)
+    if flag:
+        auth_manager.add_authenticated_client(sender, username, None) # Added because it's needed for the future auth
+        auth_manager.log_client(sender)
+    server_socket.sendto(format_message(message).encode(), sender)
+
+def handle_connection_request(sender: str, client_public_key: str, prime: str, generator: str) -> None:
+    """Handles the connection request from a client."""
+    message = auth_manager.init_connection_for_client(sender, client_public_key, prime, generator)
+    server_socket.sendto(format_message(message).encode(), sender)
+
+def handle_authentication_request(sender: str, nonce: str, encrypted: str, tag: str) -> None:
+    """Handles the authentication request from a client."""
+    # Handle the authentication request
+    if sender in auth_manager.no_auth_clients:
+        # Extract the nonce and encrypted data from the request
+        nonce = int(nonce, 16)
+        encrypted = bytes.fromhex(encrypted)
+        tag = bytes.fromhex(tag)
+
+        decrypted_session_key = auth_manager.decrypt_AES(nonce, encrypted, tag)
+
+        session_key = auth_manager.get_session_key(sender, decrypted_session_key)
+
+        # Verify the session key
+        if decrypted_session_key != session_key.to_bytes((session_key.bit_length() + 7) // 8, 'big'):
+            print(format_message(f"Client {sender} authentication failed"))
+            return
+
+        # Add the authenticated client to the list of clients
+        auth_manager.add_authenticated_client(sender, username, decrypted_session_key.hex())
+        print(format_message(f"Client {sender} authenticated successfully"))
     else:
+        print(format_message(f"Client {sender} not found in unauthenticated clients"))
 
+while True:
+    try:
+        data, sender = server_socket.recvfrom(1024)
+        data_received = data.decode()
 
-        list_of_clients.append(sender)
-        no_auth_clients.remove(sender)
-        print(format_message(f"New client {sender} connected"))
+        # For debugging purposes
+        format_message(f"Received data from {sender}: {data}")
 
-if __name__ == "__main__":
-    # Initialize the server
-    server_socket = server_init()
-    list_of_clients = [] # List to keep track of connected clients
-    no_auth_clients = [] # List to keep track of clients without authentication
-    print("- " * 30)
+        parts = data_received.split(":")
+        tag = parts[0] if len(parts) > 0 else None
+        username = parts[1] if len(parts) > 1 else None
+        password = parts[2] if len(parts) > 2 else None
+        encrypted = parts[3] if len(parts) > 3 else None
 
-    i = 1
+        if tag == "${CONNECT_TAG}":
+            handle_connection_request(sender, username, password, encrypted)
+        elif tag == "${AUTH_TAG}":
+            # Handle the authentication request
+            handle_authentication_request(sender, username, password, encrypted)
 
-    if i == 2:
-        # Test to generate Diffie-Hellman public key
-        for i in range(1):
-            private_key, public_key = generate_public_key()
-            # print(f"Private Key: {private_key}, \nPublic Key: {public_key}")
-            # Print splitted hexadecimal public and private key
-            public_key_hex = hex(public_key)[2:]
-            public_key_hex = " ".join(public_key_hex[i:i+8] for i in range(0, len(public_key_hex), 8))
-            print(f"Public Key: {public_key_hex.upper()}")
-            private_key_hex = hex(private_key)[2:]
-            private_key_hex = " ".join(private_key_hex[i:i+8] for i in range(0, len(private_key_hex), 8))
-            print(f"Private Key: {private_key_hex.upper()}")
+        # TODO: signup, signin and sending messages are not encrypted yet
+        elif tag == "${SIGNUP_TAG}":
+            handle_signup_request(sender, username, password)
+        elif tag == "${SIGNIN_TAG}":
+            handle_signin_request(sender, username, password)
+        elif tag == "${GREETING_FROM_CLIENT}":
+            # Handle the greeting from the client
+            message = format_message(f"Client {sender} connected")
+            print(message)
+            server_socket.sendto(message.encode(), sender)
+        else:
+            logger.warning(f"Unknown tag: {tag}")
+            message_formatted = format_message(data_received, auth_manager.get_username(sender))
+            print(message_formatted)
+            # Broadcast the message to all clients except the sender
+            for client in auth_manager.list_of_clients:
+                logger.info(f"Checking client {client} with type {type(client)}")
+                if client != sender:
+                    logger.info(f"Sending message to client {client}")
+                    server_socket.sendto(message_formatted.encode(), client)
 
-    while i == 1:
-        try:
-            # Receive data from clients (1024 bytes buffer size)
-            data, sender = server_socket.recvfrom(1024)
-            data_received = data.decode()
-
-            if debug:
-                # Debug the received data and print it
-                print(format_message(f"Received data from {sender}: {data}"))
-
-            # Split the received data into components
-            parts = data_received.split(":")
-            tag = parts[0] if len(parts) > 0 else None
-            username = parts[1] if len(parts) > 1 else None
-            password = parts[2] if len(parts) > 2 else None
-
-            # if data_received != "${GREETING_TAG}":
-            # if data_received != "GREETING_FROM_CLIENT":
-            #     message_formatted = format_message(data_received, sender)
-            #     print(message_formatted)
-            #     # Broadcast the message to all clients except the sender
-            #     for client in list_of_clients:
-            #         if client != sender:
-            #             server_socket.sendto(message_formatted.encode(), client)
-
-            # Handle the connection request
-            if tag == "${CONNECT_TAG}" or tag == "${GREETING_FROM_CLIENT}":
-                authenticate_client(no_auth_clients, list_of_clients, sender, username, password)
-                pass
-            # Handle the sign-up request
-            elif tag == "${SIGNUP_TAG}":
-                message = sign_up(username, password)
-                server_socket.sendto(format_message(message).encode(), sender)
-            # Handle the sign-in request
-            elif tag == "${SIGNIN_TAG}":
-                message = sign_in(username, password)
-                server_socket.sendto(format_message(message).encode(), sender)
-            # Handle the message from the client
-            else:
-                message_formatted = format_message(data_received, sender)
-                print(message_formatted)
-                # Broadcast the message to all clients except the sender
-                for client in list_of_clients:
-                    if client != sender:
-                        server_socket.sendto(message_formatted.encode(), client)
-
-        except Exception as e:
-            print(format_message(f"An error occurred. {e}"))
-                
-        except KeyboardInterrupt:
-            print("\nServer shutting down...")
-            break
-    server_socket.close() # Close the socket when done
+    except Exception as e:
+        print(format_message(f"An error occurred: {e}"))
+    except KeyboardInterrupt:
+        print("\nServer shutting down...")
+        break
