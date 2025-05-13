@@ -41,10 +41,10 @@ def server_init() -> socket.socket:
     try:
         # Bind the server socket to the specified address and port
         server.bind((address, port))
-        print(f"Server initialized and connected to {address}:{port}")
+        logger.info(f"Server initialized and connected to {address}:{port}")
         return server
     except Exception as e:
-        print(f"Error initializing server: {e}")
+        logger.critical(f"Error initializing server: {e}")
         exit("Failed to initialize server.")
 
 # Initialize the server socket
@@ -57,43 +57,13 @@ def format_message(message: str, sender: str=None) -> str:
         sender (str): The sender of the message.
         message (str): The message content.
     """
-    logger.debug(f"<From {f'{sender[0]}:{sender[1]}' if sender else 'Server'}> {message}")
-    return f"<From {f'{sender[0]}:{sender[1]}' if sender else 'Server'}> {message}"
-
-def write_to_json_file(data: dict, filename: str="test.json") -> None:
-    """
-    Writes data to a JSON file.
-    Args:
-        filename (str): The name of the file to write to.
-        data (dict): The data to write to the file.
-    """
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=4)
-        print(f"Data written to {filename}")
-        return
-
-def read_from_json_file(filename: str="test.json") -> dict:
-    """
-    Reads data from a JSON file.
-    Args:
-        filename (str): The name of the file to read from.
-    Returns:
-        dict: The data read from the file.
-    """
-    try:
-        with open(filename, "r") as f:
-            data = json.load(f)
-            print(f"Data read from {filename}")
-            return data
-    except FileNotFoundError:
-        print(f"File {filename} not found.")
-        return {}
-    except json.JSONDecodeError:
-        print(f"Error decoding JSON from {filename}.")
-        return {}
-    except Exception as e:
-        print(f"Error reading from {filename}: {e}")
-        return {}
+    if sender:
+        username = auth_manager.get_username(sender)
+        logger.debug(f"<From {username if username != 'Unknown' else f'{sender[0]}:{sender[1]}'}> {message}")
+        return f"<From {username if username != 'Unknown' else f'{sender[0]}:{sender[1]}'}> {message}"
+    else:
+        logger.debug(f"<From Server> {message}")
+        return f"<From Server> {message}"
 
 def handle_signup_request(sender: str, username: str, password: str) -> None:
     """Handles the signup request from a client."""
@@ -103,9 +73,9 @@ def handle_signup_request(sender: str, username: str, password: str) -> None:
 def handle_signin_request(sender: str, username: str, password: str) -> None:
     """Handles the signin request from a client."""
     flag, message = sign_in(username, password)
-    if flag:
+    if flag == True:
         auth_manager.add_authenticated_client(sender, username, None) # Added because it's needed for the future auth
-        auth_manager.log_client(sender)
+        # auth_manager.log_client(sender)
     server_socket.sendto(format_message(message).encode(), sender)
 
 def handle_connection_request(sender: str, client_public_key: str, prime: str, generator: str) -> None:
@@ -162,24 +132,22 @@ while True:
             handle_signup_request(sender, username, password)
         elif tag == "${SIGNIN_TAG}":
             handle_signin_request(sender, username, password)
-        elif tag == "${GREETING_FROM_CLIENT}":
+        elif tag == "GREETING_FROM_CLIENT":
             # Handle the greeting from the client
             message = format_message(f"Client {sender} connected")
             print(message)
             server_socket.sendto(message.encode(), sender)
         else:
-            logger.warning(f"Unknown tag: {tag}")
-            message_formatted = format_message(data_received, auth_manager.get_username(sender))
+            message_formatted = format_message(data_received, sender)
             print(message_formatted)
             # Broadcast the message to all clients except the sender
             for client in auth_manager.list_of_clients:
-                logger.info(f"Checking client {client} with type {type(client)}")
-                if client != sender:
-                    logger.info(f"Sending message to client {client}")
+                if (client != sender) and (auth_manager.get_client_logged(sender)):
+                    logger.debug(f"Sending plain message to client {client}")
                     server_socket.sendto(message_formatted.encode(), client)
 
     except Exception as e:
-        print(format_message(f"An error occurred: {e}"))
+        logger.exception(format_message(f"An error occurred: {e}"))
     except KeyboardInterrupt:
         print("\nServer shutting down...")
         break

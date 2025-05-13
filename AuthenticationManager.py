@@ -35,7 +35,7 @@ class AuthenticationManager:
         self.list_of_clients[sender] = {
             "username": username,
             "session_key": session_key,
-            "logged": False
+            "logged": True
         }
 
     def decrypt_AES(self, session_key: str, nonce: str, ciphertext: str, tag: str) -> str:
@@ -105,7 +105,7 @@ class AuthenticationManager:
             nonce=str(self.DHKE_instance.nonce),
             plaintext=str(self.DHKE_instance.share_key)
         )
-        
+
         return "${CONNECT_TAG}:" + f"{hex(self.DHKE_instance.pub_key)[2:]}:{hex(self.DHKE_instance.nonce)[2:]}:{ciphertext}:{tag}".upper()
 
     def log_client(self, sender) -> bool:
@@ -143,4 +143,17 @@ class AuthenticationManager:
         if sender in self.list_of_clients:
             return self.list_of_clients[sender]["username"]
         else:
-            return None
+            return "Unknown"
+        
+    def get_client_logged(self, sender) -> bool:
+        """
+        Returns the logged status for the client.
+        Args:
+            sender (str): The identifier of the client.
+        Returns:
+            bool: The logged status for the client.
+        """
+        if sender in self.list_of_clients:
+            return self.list_of_clients[sender]["logged"]
+        else:
+            return False
