@@ -94,7 +94,7 @@ class AuthenticationManager:
         self.DHKE_instance.generate_publickey()
         print(f"Server's public key: {self.DHKE_instance.pub_key}")
         self.DHKE_instance.generate_nonce()
-        session_key = self.DHKE_instance.exchange_key(int(client_public_key, 16))
+        session_key = self.DHKE_instance.generate_session_key(int(client_public_key, 16))
         self.no_auth_clients[sender]["session_key"] = session_key
         
         # Dodanie klienta do listy nieautoryzowanych

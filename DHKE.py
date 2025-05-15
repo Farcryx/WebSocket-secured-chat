@@ -1,5 +1,6 @@
 import random
 import os
+import hashlib as hash
 
 class DHKE:
     # def __init__(self):
@@ -27,9 +28,11 @@ class DHKE:
         self.pub_key = pow(self.G_param,self.pk) % self.P_param
         print(f"Public key: {self.pub_key}")
 
-    def exchange_key(self,other_public):
+    def generate_session_key(self,other_public):
         self.share_key = pow(other_public,self.pk) % self.P_param
-        print(f"Shared key: {self.share_key}")
+        # Hash the shared key to create a 128-bit session key
+        self.session_key = hash.sha256(str(self.share_key).encode()).hexdigest()[16:]
+        print(f"Session key: {self.session_key}")
     
     def generate_nonce(self):
         self.nonce = random.randrange(start = 1,stop = 10,step = 1)
