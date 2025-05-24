@@ -1,5 +1,6 @@
 import json
 import hashlib as hash
+import uuid
 
 def sign_up(username: str, password: str) -> str:
     """
@@ -24,11 +25,14 @@ def sign_up(username: str, password: str) -> str:
             if user["username"] == username:
                 print(f"SIGNUP_FAIL: Username '{username}' already exists.")
                 return f"SIGNUP_FAIL: Username '{username}' already exists."
+            
+        salt = uuid.uuid4().hex.upper()
 
         # Add the new user
         users.append({
             "username": username, 
-            "password": hash.sha256(password.encode()).hexdigest()
+            "salt": salt,
+            "password": hash.sha256(password.encode() + salt).hexdigest().upper()
             })
 
         # Write the updated list back to the file
@@ -51,7 +55,7 @@ def sign_in(username: str, password: str) -> tuple[bool, str]:
         with open("clients.json", "r") as f:
             users = json.load(f)
             for user in users:
-                if user["username"] == username and (user["password"] == hash.sha256(password.encode()).hexdigest()):
+                if user["username"] == username and (user["password"] == hash.sha256(password.encode() + user["salt"]).hexdigest().upper()):
                     print(f"SIGNIN_OK: {username}")
                     return True, f"SIGNIN_OK: {username}"
             print(f"SIGNIN_FAIL: Invalid credentials.")
