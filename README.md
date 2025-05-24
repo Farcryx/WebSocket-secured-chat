@@ -38,5 +38,7 @@ The application ensures secure communication using the following mechanisms:
    ```
 
 ## Future Improvements
-- [ ] Check if the Diffie-Hellman Key Exchange is implemented correctly
-- [ ] Secured signup and signin requests using AES-GCM
+- [x] Check if the Diffie-Hellman Key Exchange is implemented correctly
+- [x] Secured signup and signin requests using AES-GCM
+- [ ] Secured broadcast messages
+- [ ] Secured direct messages
