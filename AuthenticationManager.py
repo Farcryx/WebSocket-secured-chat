@@ -101,7 +101,7 @@ class AuthenticationManager:
                 ciphertext=ciphertext,
                 tag=tag,
             )
-            print(f"Decrypted session key: {decrypted_session_key}")
+            # print(f"Decrypted session key: {decrypted_session_key}")
         except Exception as e:
             self.logger.error(f"Decryption failed: {e}")
 

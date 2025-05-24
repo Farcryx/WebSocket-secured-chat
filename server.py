@@ -43,6 +43,20 @@ def format_message(message: str, sender=None) -> str:
     else:
         logger.debug(f"<From Server> {message}")
         return f"<From Server> {message}"
+    
+def encrypt_message(sender: str, message: str) -> str:
+    """
+    Encrypts the message using AES encryption.
+    Args:
+        sender (str): The sender's address.
+        message (str): The message content.
+    Returns:
+        str: The encrypted message.
+    """
+    session_key = auth_manager.get_session_key(sender)
+    nonce = auth_manager.get_nonce(sender)
+    ciphertext, tag = EncryptionModule.encrypt_AES(session_key=session_key, nonce=nonce, plaintext=message)
+    return f"{nonce}:{ciphertext}:{tag}"
 
 def handle_signup_request(server_socket, sender, username, password):
     """Handles the signup request from a client."""
@@ -107,9 +121,15 @@ def process_client_message(server_socket, data, sender):
         elif not auth_manager.list_of_clients[sender].get("logged") and auth_manager.list_of_clients[sender].get("authenticated"):
             plaintext = EncryptionModule.decrypt_AES(
             auth_manager.get_session_key(sender), nonce=username, ciphertext=password, tag=encrypted, message_flag=True)
-            plaintext = plaintext.split(":")
-            username = plaintext[0] if len(plaintext) > 0 else None
-            password = plaintext[1] if len(plaintext) > 1 else None
+            plaintext = plaintext
+            if plaintext is None:
+                logger.error(f"Decryption failed for {sender}.")
+                return
+            else:
+                logger.info(f"Decrypted plaintext for {sender}: {plaintext}")
+                plaintext = plaintext.split(":")
+                username = plaintext[0] if len(plaintext) > 0 else None
+                password = plaintext[1] if len(plaintext) > 1 else None
             
             if tag == "${SIGNUP_TAG}":
                 handle_signup_request(server_socket, sender, username, password)
@@ -124,23 +144,6 @@ def process_client_message(server_socket, data, sender):
     else:
         logger.warning(f"Unknown tag received from client new client {sender}: {tag}")
         server_socket.sendto(format_message(f"Unknown tag received from client new client {sender}: {tag}").encode(), sender)
-    
-    # if tag == "${CONNECT_TAG}":
-    #     handle_connection_request(server_socket, sender, username, password, encrypted)
-    # elif tag == "${AUTH_TAG}":
-    #     handle_authentication_request(server_socket, sender, username, password, encrypted)
-    # elif tag == "${SIGNUP_TAG}":
-    #     handle_signup_request(server_socket, sender, username, password)
-    # elif tag == "${SIGNIN_TAG}":
-    #     handle_signin_request(server_socket, sender, username, password)
-    # elif tag == "GREETING_FROM_CLIENT":
-    #     server_socket.sendto(format_message("Hello from server!").encode(), sender)
-    # else:
-    #     message_formatted = format_message(data, sender)
-    #     if sender in auth_manager.list_of_clients:
-    #         for client in auth_manager.list_of_clients:
-    #             if client != sender and auth_manager.list_of_clients[client].get("logged"):
-    #                 server_socket.sendto(message_formatted.encode(), client)
 
 def main():
     server_socket = initialize_server()

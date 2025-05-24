@@ -32,7 +32,7 @@ def sign_up(username: str, password: str) -> str:
         users.append({
             "username": username, 
             "salt": salt,
-            "password": hash.sha256(password.encode() + salt).hexdigest().upper()
+            "password": hash.sha512((password + salt).encode()).hexdigest().upper()
             })
 
         # Write the updated list back to the file
@@ -55,7 +55,7 @@ def sign_in(username: str, password: str) -> tuple[bool, str]:
         with open("clients.json", "r") as f:
             users = json.load(f)
             for user in users:
-                if user["username"] == username and (user["password"] == hash.sha256(password.encode() + user["salt"]).hexdigest().upper()):
+                if user["username"] == username and (user["password"] == hash.sha512((password + user["salt"]).encode()).hexdigest().upper()):
                     print(f"SIGNIN_OK: {username}")
                     return True, f"SIGNIN_OK: {username}"
             print(f"SIGNIN_FAIL: Invalid credentials.")
