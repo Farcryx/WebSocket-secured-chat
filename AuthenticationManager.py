@@ -1,9 +1,9 @@
-# import logging_module
 import base64
 from Crypto.Cipher import AES
 from dh import *
 from DHKE import DHKE
 from encryption_module import EncryptionModule
+from console_logger import logger
 
 
 class AuthenticationManager:
@@ -57,6 +57,7 @@ class AuthenticationManager:
             "nonce": nonce,
             "authenticated": False,
             "logged": False,
+            "dm_recipient": "Unknown",
         }
 
     def init_connection_for_client(
@@ -76,12 +77,6 @@ class AuthenticationManager:
         self.DHKE_instance.generate_publickey()
         self.DHKE_instance.generate_nonce()
         self.DHKE_instance.generate_session_key(int(client_public_key, 16))
-        self.add_client(
-            sender, "Unknown", self.DHKE_instance.session_key, self.DHKE_instance.nonce
-        )
-        self.logger.debug(
-            f"Client {sender} connected with session key: {self.DHKE_instance.session_key} and nonce: {self.DHKE_instance.nonce}"
-        )
 
         # Use the same nonce for encryption as generated
         session_key_hex = str(self.DHKE_instance.session_key)
@@ -89,6 +84,12 @@ class AuthenticationManager:
         nonce_hex = hex(nonce_int)[2:]  # Convert nonce to hex string
         nonce_bytes = nonce_int.to_bytes((nonce_int.bit_length() + 7) // 8, "big")
 
+        self.add_client(
+            sender, "Unknown", session_key_hex, nonce_hex
+        )
+        self.logger.debug(
+            f"Client {sender} connected with session key: {session_key_hex} and nonce (hex): {nonce_hex}"
+        )
         ciphertext, tag = EncryptionModule.encrypt_AES(
             session_key=session_key_hex, nonce=nonce_hex, plaintext=session_key_hex
         )
@@ -121,13 +122,14 @@ class AuthenticationManager:
             + f"{hex(self.DHKE_instance.pub_key)[2:]}:{hex(self.DHKE_instance.nonce)[2:]}:{ciphertext}:{tag}".upper()
         )
 
-    def signin_client(self, sender):
+    def signin_client(self, sender, username):
         """
         Set the client as signed in.
         """
         # For the sender in self.auth_clients add flag True
         if sender in self.list_of_clients:
             self.list_of_clients[sender]["logged"] = True
+            self.list_of_clients[sender]["username"] = username
 
     def get_session_key(self, sender) -> str:
         """
@@ -202,7 +204,48 @@ class AuthenticationManager:
         if sender in self.list_of_clients:
             session_key = self.list_of_clients[sender]["session_key"]
             nonce = self.list_of_clients[sender]["nonce"]
-            ciphertext, tag = EncryptionModule.encrypt_AES(session_key, nonce, message)
+            ciphertext, tag = EncryptionModule.encrypt_AES(session_key, str(nonce), message)
             return f"{nonce}:{ciphertext}:{tag}"
         else:
             return None
+        
+    def get_sender_by_username(self, username: str) -> str:
+        """
+        Finds the sender (client identifier) based on the username.
+        Args:
+            username (str): The username to search for.
+        Returns:
+            str: The sender (client identifier) if found, otherwise None.
+        """
+        for sender, client_data in self.list_of_clients.items():
+            logger.debug(f"Checking client {sender} with username {client_data.get('username')}")
+            if client_data.get("username") == username:
+                logger.debug(f"Found sender {sender} for username {username}")
+                return sender
+        return None
+    
+    def get_nonce(self, sender: str) -> str:
+        """
+        Returns the nonce for the client.
+        Args:
+            sender (str): The identifier of the client.
+        Returns:
+            str: The nonce for the client.
+        """
+        if sender in self.list_of_clients:
+            return self.list_of_clients[sender]["nonce"]
+        else:
+            return None
+        
+    def set_dm_recipient(self, sender: str, recipient: str) -> None:
+        """
+        Sets the direct message recipient for the client.
+        Args:
+            sender (str): The identifier of the client.
+            recipient (str): The username of the recipient.
+        """
+        if sender in self.list_of_clients:
+            recipient_address = self.get_sender_by_username(recipient)
+            self.list_of_clients[sender]["dm_recipient"] = recipient_address
+        else:
+            self.logger.warning(f"Sender {sender} not found in list of clients.")

@@ -38,8 +38,8 @@ def sign_up(username: str, password: str) -> str:
         # Write the updated list back to the file
         with open("clients.json", "w") as f:
             json.dump(users, f, indent=4)
-            print(f"SIGNUP_OK: {username}")
-            return f"SIGNUP_OK: {username}"
+            print(f"SIGNUP_OK")
+            return f"SIGNUP_OK"
     except Exception as e:
         print(f"SIGNUP_FAIL: {e}")
         return f"SIGNUP_FAIL: {e}"
@@ -56,8 +56,8 @@ def sign_in(username: str, password: str) -> tuple[bool, str]:
             users = json.load(f)
             for user in users:
                 if user["username"] == username and (user["password"] == hash.sha512((password + user["salt"]).encode()).hexdigest().upper()):
-                    print(f"SIGNIN_OK: {username}")
-                    return True, f"SIGNIN_OK: {username}"
+                    print(f"SIGNIN_OK")
+                    return True, f"SIGNIN_OK"
             print(f"SIGNIN_FAIL: Invalid credentials.")
             return False, f"SIGNIN_FAIL: Invalid credentials."
     except Exception as e:

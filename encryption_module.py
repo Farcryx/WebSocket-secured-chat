@@ -26,7 +26,10 @@ class EncryptionModule:
             algorithms.AES(key_bytes), modes.GCM(nonce_bytes), backend=default_backend()
         )
         encryptor = cipher.encryptor()
-        ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+        if type(plaintext) is not bytes:
+            ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+        else:
+            ciphertext = encryptor.update(plaintext) + encryptor.finalize()
         return ciphertext.hex(), encryptor.tag.hex()
 
     @staticmethod
