@@ -3,6 +3,9 @@
 ## Overview
 This chat application is designed with a focus on network security. It uses a client-server architecture and implements secure communication protocols, including Diffie-Hellman key exchange and AES encryption.
 
+> [!NOTE]
+> Project is built as monolith but the idea is to move to microservices architecture.
+
 ## Server Functionality
 The server is responsible for managing client connections, handling authentication, and facilitating secure communication. It is implemented in `server.py` and uses the following components:
 
@@ -34,11 +37,11 @@ The application ensures secure communication using the following mechanisms:
 
 ## Running the Server
    ```bash
-   python3 server.py
+   python3 main.py
    ```
 
 ## Future Improvements
 - [x] Check if the Diffie-Hellman Key Exchange is implemented correctly
 - [x] Secured signup and signin requests using AES-GCM
-- [ ] Secured broadcast messages
-- [ ] Secured direct messages
+- [x] Secured broadcast messages
+- [x] Secured direct messages

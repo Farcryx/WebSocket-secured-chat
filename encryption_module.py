@@ -27,13 +27,13 @@ class EncryptionModule:
         )
         encryptor = cipher.encryptor()
         if type(plaintext) is not bytes:
-            ciphertext = encryptor.update(plaintext.encode()) + encryptor.finalize()
+            ciphertext = encryptor.update(plaintext.encode('cp852')) + encryptor.finalize()
         else:
             ciphertext = encryptor.update(plaintext) + encryptor.finalize()
         return ciphertext.hex(), encryptor.tag.hex()
 
     @staticmethod
-    def decrypt_AES(session_key: str, nonce: str, ciphertext: str, tag: str, message_flag: bool=False) -> str:
+    def decrypt_AES(session_key: str, nonce: str, ciphertext: str, tag: str, message_flag: bool=False) -> str | None:
         """
         Decrypts the AES-encrypted data using the provided key, nonce and tag.
         Args:
@@ -66,7 +66,7 @@ class EncryptionModule:
             plaintext = cipher.decrypt_and_verify(ciphertext, tag)
             logger.debug(f"Decrypted plaintext: {plaintext.hex()}")
             if message_flag:
-                return plaintext.decode()
+                return plaintext.decode('cp852')
             else:
                 # Return the hex representation of the plaintext
                 logger.debug(f"Returning hex representation of plaintext: {plaintext.hex()}")

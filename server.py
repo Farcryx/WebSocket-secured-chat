@@ -43,27 +43,13 @@ def format_message(message: str, sender=None, dm_flag: bool=False) -> str:
     else:
         logger.debug(f"<From Server> {message}")
         return f"<From Server> {message}"
-    
-def encrypt_message(sender: str, message: str) -> str:
-    """
-    Encrypts the message using AES encryption.
-    Args:
-        sender (str): The sender's address.
-        message (str): The message content.
-    Returns:
-        str: The encrypted message.
-    """
-    session_key = auth_manager.get_session_key(sender)
-    nonce = auth_manager.get_nonce(sender)
-    ciphertext, tag = EncryptionModule.encrypt_AES(session_key=session_key, nonce=nonce, plaintext=message)
-    return f"{nonce}:{ciphertext}:{tag}"
 
-def handle_signup_request(server_socket, sender, username, password):
+def handle_signup_request(server_socket: socket.socket, sender: str, username: str, password: str) -> None:
     """Handles the signup request from a client."""
     message = sign_up(username, password)
     server_socket.sendto(format_message(message).encode(), sender)
 
-def handle_signin_request(server_socket, sender, username, password):
+def handle_signin_request(server_socket, sender: str, username: str, password: str) -> None:
     """Handles the signin request from a client."""
     if auth_manager.check_if_username_logged(username):
         message = f"SIGNIN_FAIL: User {username} is already logged in."
@@ -76,7 +62,7 @@ def handle_signin_request(server_socket, sender, username, password):
         logger.info(f"User {username} signed in successfully.")
     server_socket.sendto(format_message(message).encode(), sender)
 
-def handle_connection_request(server_socket, sender, client_public_key, prime, generator):
+def handle_connection_request(server_socket: socket.socket, sender: str, client_public_key: str, prime: str, generator: str) -> None:
     """Handles the connection request from a client. Generate session key and send it back."""
     message = auth_manager.init_connection_for_client(sender, client_public_key, prime, generator)
     server_socket.sendto(format_message(message).encode(), sender)
@@ -95,7 +81,7 @@ def handle_authentication_request(server_socket, sender, nonce, encrypted, tag):
             logger.warning(f"Authentication failed for {sender}. Decrypted session key: {decrypted_session_key} does not match the expected session key {session_key}.")
         # server_socket.sendto(format_message(message).encode(), sender)
 
-def process_client_message(server_socket, data, sender):
+def process_client_message(server_socket: socket.socket, data: str, sender: str) -> None:
     """Processes incoming messages from clients."""
     logger.info(f"Received from {sender}: {data}")
     parts = data.split(":")
@@ -122,10 +108,6 @@ def process_client_message(server_socket, data, sender):
                         else:
                             logger.warning(f"DM_FAIL: Recipient {username} does not exist or is not logged in.")
                             server_socket.sendto(format_message(f"DM_FAIL: Recipient {username} does not exist or is not logged in.").encode(), sender)
-                    elif username is not None and password is not None and encrypted is not None:
-                        plaintext = EncryptionModule.decrypt_AES(
-                        auth_manager.get_session_key(sender), nonce=tag, ciphertext=username, tag=password, message_flag=True)
-                        server_socket.sendto(format_message(EncryptionModule.encrypt_AES(auth_manager.get_session_key(sender), nonce=tag, plaintext=format_message(plaintext=plaintext, sender=sender))).encode(), auth_manager.list_of_clients[recipient_address].get('dm_recipient'))
                     else:
                         logger.warning(f"DM_FAIL: Recipient {username} does not exist or is not logged in. Address: {recipient_address}")
                         server_socket.sendto(format_message(f"DM_FAIL: Recipient {username} does not exist or is not logged in.").encode(), sender)
@@ -167,7 +149,7 @@ def process_client_message(server_socket, data, sender):
         logger.warning(f"Unknown tag received from client new client {sender}: {tag}")
         server_socket.sendto(format_message(f"Unknown tag received from client new client {sender}: {tag}").encode(), sender)
 
-def main():
+def main() -> None:
     server_socket = initialize_server()
     while True:
         try:
@@ -175,11 +157,7 @@ def main():
             logger.info(f"Debugging bytes data from {sender}: {data}")
             try:
                 logger.info(f"Debugging hex data from {sender}: {data.decode()}")
-                # New thread for each message
-                # threading.Thread(target=process_client_message, args=(server_socket, data.decode(), sender)).start()
                 process_client_message(server_socket, data.decode(), sender)
-                # End the thread after processing
-                # threading.current_thread().join()
             except UnicodeDecodeError:
                 logger.error(f"Failed to decode data from {sender}: {data}")
                 continue
@@ -190,17 +168,8 @@ def main():
         except KeyboardInterrupt:
             logger.info("Server shutting down...")
             server_socket.close()
-            # End all threads
-            # for thread in threading.enumerate():
-            #     if thread is not threading.current_thread():
-            #         thread.join()
-
             break
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             server_socket.close()
-            # End all threads
-            # for thread in threading.enumerate():
-            #     if thread is not threading.current_thread():
-            #         thread.join()
             break

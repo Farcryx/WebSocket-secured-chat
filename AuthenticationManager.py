@@ -1,6 +1,5 @@
 import base64
 from Crypto.Cipher import AES
-from dh import *
 from DHKE import DHKE
 from encryption_module import EncryptionModule
 from console_logger import logger
@@ -92,7 +91,7 @@ class AuthenticationManager:
             self.list_of_clients[sender]["logged"] = True
             self.list_of_clients[sender]["username"] = username
 
-    def get_session_key(self, sender) -> str:
+    def get_session_key(self, sender) -> str | None:
         """
         Returns the session key for the client.
         Args:
@@ -153,7 +152,7 @@ class AuthenticationManager:
                 return True
         return False
 
-    def encrypt_message(self, sender: str, message: str) -> str:
+    def encrypt_message(self, sender: str, message: str) -> str | None:
         """
         Encrypts the message using the session key of the client.
         Args:
@@ -172,7 +171,7 @@ class AuthenticationManager:
         else:
             return None
 
-    def get_sender_by_username(self, username: str) -> str:
+    def get_sender_by_username(self, username: str | None) -> str | None:
         """
         Finds the sender (client identifier) based on the username.
         Args:
@@ -185,7 +184,7 @@ class AuthenticationManager:
                 return sender
         return None
 
-    def get_nonce(self, sender: str) -> str:
+    def get_nonce(self, sender: str) -> str | None:
         """
         Returns the nonce for the client.
         Args:
