@@ -1,47 +1,33 @@
-# Chat Application Documentation
+# WebSocket UDP CLI ChatApp
+*Currently under active development with known issues.*
 
-## Overview
-This chat application is designed with a focus on network security. It uses a client-server architecture and implements secure communication protocols, including Diffie-Hellman key exchange and AES encryption.
+The app is an academic project for both Network Security (built as monolyth) and Microservices (refactored to microservice architecture) courses. It's designed to provide secured UDP communication between clients and server.
 
-> [!NOTE]
-> Project is built as monolith but the idea is to move to microservices architecture.
+### Getting Started
+Project aims to secure the UDP port. Server is built with Python but the original client is built in C (the client is developed by other group member). As a team leader (group of 2 people) I focused on building the server and choosing the technology used in project.
 
-## Server Functionality
-The server is responsible for managing client connections, handling authentication, and facilitating secure communication. It is implemented in `server.py` and uses the following components:
+### Key Features
 
-1. **Initialization**:
-   - The server reads its IP address and port from `server.json`.
-   - It creates a UDP socket and binds it to the specified address and port.
+- Key Exchange: Diffie Hellman is used to create pairs of private and public keys and then to create session key to encrypt the messages.
+- Encryption: Messages are encrypted with AES-GCM method with 128-bits session key, 12-bits nonce/IV and 16-bits HMAC (Hash-based Message Authentication Code) 
+- Storing passwords: Passwords are hashed with SHA-512 and stored in JSON file. Each password has its own 16-bits salt. 
 
-2. **Authentication**:
-   - The `AuthenticationManager` class manages unauthenticated and authenticated clients.
-   - Clients are authenticated using a combination of Diffie-Hellman key exchange and AES encryption.
+![Architecture diagram](docs/Architecture-diagram.png)
 
-3. **Message Handling**:
-   - The server listens for incoming messages from clients.
-   - It processes different types of messages, such as connection requests, authentication requests, and chat messages.
-   - Messages are broadcasted to all authenticated clients except the sender.
+## Microservice architecture
+The server is implemented by 3 microservices:
 
-## Secure Communication
-The application ensures secure communication using the following mechanisms:
+1. **Message-handler microservice**:
+   - The entrypoint for the server. It gathers all the incoming and outgoing messages. If it's needed calls `authentication` microservice.
 
-1. **Diffie-Hellman Key Exchange**:
-   - Used to establish a shared session key between the client and server without transmitting the key directly.
+2. **Authentication microservice**:
+   - Checks if the user is authenticated with also option to change this state. It has own temporary dictionary storage of active users.
 
-2. **AES Encryption**:
-   - Messages are encrypted using AES-GCM to ensure confidentiality and integrity.
-
-3. **Authentication**:
-   - Clients must authenticate with the server using a username and password.
-   - Passwords are hashed using SHA-256 and stored in `clients.json`.
+3. **Credentials microservice**:
+   - Microservice which is called by the `authentication` microservice when the credentials should be read from the database - JSON file.
 
 ## Running the Server
+Project uses Docker containers and whole project can be runned with a single [Docker Compose](https://github.com/docker/compose) command.
    ```bash
-   python3 main.py
+   docker compose up --build
    ```
-
-## Future Improvements
-- [x] Check if the Diffie-Hellman Key Exchange is implemented correctly
-- [x] Secured signup and signin requests using AES-GCM
-- [x] Secured broadcast messages
-- [x] Secured direct messages
