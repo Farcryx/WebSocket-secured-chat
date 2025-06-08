@@ -57,9 +57,9 @@ def sign_in(username: str, password: str) -> tuple[bool, str]:
             for user in users:
                 if user["username"] == username and (user["password"] == hash.sha512((password + user["salt"]).encode()).hexdigest().upper()):
                     print(f"SIGNIN_OK")
-                    return True, f"SIGNIN_OK"
+                    return f"SIGNIN_OK"
             print(f"SIGNIN_FAIL: Invalid credentials.")
-            return False, f"SIGNIN_FAIL: Invalid credentials."
+            return f"SIGNIN_FAIL: Invalid credentials."
     except Exception as e:
         print(f"SIGNIN_FAIL: {e}")
-        return False, f"SIGNIN_FAIL: {e}"
+        return f"SIGNIN_FAIL: {e}"

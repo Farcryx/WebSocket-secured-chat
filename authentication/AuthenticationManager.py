@@ -112,9 +112,13 @@ class AuthenticationManager:
         Returns:
             str: The username for the client.
         """
-        if sender in self.list_of_clients:
-            return self.list_of_clients[sender]["username"]
+        
+        client_tuple = tuple(sender.split(":"))
+        client_tuple = (client_tuple[0], int(client_tuple[1]))
+        if str(client_tuple) in self.list_of_clients:
+            return self.list_of_clients[str(client_tuple)]["username"]
         else:
+            logger.warning(f"Sender {client_tuple} not found in list of clients.")
             return "Unknown"
 
     def get_client_logged(self, sender) -> bool:
@@ -204,8 +208,20 @@ class AuthenticationManager:
             sender (str): The identifier of the client.
             recipient (str): The username of the recipient.
         """
+        self.logger.debug(f"Setting DM recipient for {sender} to {recipient}.")
         if sender in self.list_of_clients:
             recipient_address = self.get_sender_by_username(recipient)
             self.list_of_clients[sender]["dm_recipient"] = recipient_address
+            self.logger.debug(
+                f"DM recipient for {sender} set to {recipient_address}."
+            )
         else:
             self.logger.warning(f"Sender {sender} not found in list of clients.")
+
+    def get_list_of_clients(self) -> dict:
+        """
+        Returns the list of clients.
+        Returns:
+            dict: The list of clients.
+        """
+        return self.list_of_clients
