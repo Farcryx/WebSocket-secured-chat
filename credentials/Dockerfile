@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 COPY . .
 
 # Expose the port the app runs on
-EXPOSE 3443/udp
+EXPOSE 5002
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["fastapi", "run", "main.py", "--port", "5002"]

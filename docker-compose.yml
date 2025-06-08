@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  authentication:
+    build:
+      context: ./authentication
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./authentication:/app
+    depends_on:
+      - credentials
+
+  credentials:
+    build:
+      context: ./credentials
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./credentials:/app
+
+  message-handler:
+    build:
+      context: ./message-handler
+      dockerfile: Dockerfile
+    ports:
+      - "3443:3443/udp"
+    volumes:
+      - ./message-handler:/app
+    depends_on:
+      - authentication

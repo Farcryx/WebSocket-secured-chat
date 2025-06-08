@@ -1,7 +1,7 @@
 import socket
 from read_credentials import load_server_credentials
 # from sign_ip_in import sign_up, sign_in
-from Crypto.Util.Padding import unpad
+# from Crypto.Util.Padding import unpad
 from console_logger import logger
 # from AuthenticationManager import AuthenticationManager
 from encryption_module import EncryptionModule
@@ -57,7 +57,7 @@ def serialize_sender(sender: tuple) -> str:
 
 def handle_signup_request(server_socket: socket.socket, sender: str, username: str, password: str) -> None:
     """Handles the signup request by delegating to the authentication microservice."""
-    url = "http://localhost:5001/signup"  # Replace with the actual URL of the authentication microservice
+    url = "http://authentication:5001/signup"  # Replace with the actual URL of the authentication microservice
     payload = {
         "username": username,
         "password": password
@@ -76,7 +76,7 @@ def handle_signup_request(server_socket: socket.socket, sender: str, username: s
 
 def handle_signin_request(server_socket, sender: str, username: str, password: str) -> None:
     """Handles the signin request by delegating to the authentication microservice."""
-    url = "http://localhost:5001/signin"  # Replace with the actual URL of the authentication microservice
+    url = "http://authentication:5001/signin"  # Replace with the actual URL of the authentication microservice
     payload = {
         "sender": str(sender),
         "username": username,
@@ -95,7 +95,7 @@ def handle_signin_request(server_socket, sender: str, username: str, password: s
 
 def handle_connection_request(server_socket: socket.socket, sender: str, client_public_key: str, prime: str, generator: str) -> None:
     """Handles the connection request by delegating to the authentication microservice."""
-    url = "http://localhost:5001/connection"  # Replace with the actual URL of the authentication microservice
+    url = "http://authentication:5001/connection"  # Replace with the actual URL of the authentication microservice
     payload = {
         "sender": str(sender),
         "client_public_key": client_public_key,
@@ -115,7 +115,7 @@ def handle_connection_request(server_socket: socket.socket, sender: str, client_
 
 def handle_authentication_request(server_socket, sender, nonce, encrypted, tag):
     """Handles the authentication request by delegating to the authentication microservice."""
-    url = "http://localhost:5001/authenticate"  # Replace with the actual URL of the authentication microservice
+    url = "http://authentication:5001/authenticate"  # Replace with the actual URL of the authentication microservice
     payload = {
         "sender": str(sender),
         "nonce": nonce,

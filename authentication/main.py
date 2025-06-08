@@ -2,11 +2,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from AuthenticationManager import AuthenticationManager
 from encryption_module import EncryptionModule
-from console_logger import logger  # Import the logger
-from sign_ip_in import sign_up, sign_in  # Import sign_up and sign_in functions
+from console_logger import logger
+from requests_endpoints import signin_request, signup_request
 
 app = FastAPI()
-auth_manager = AuthenticationManager(logger=logger)  # Pass the logger instance
+auth_manager = AuthenticationManager(logger=logger)
 
 # Define request models for validation
 class ConnectionRequest(BaseModel):
@@ -69,12 +69,12 @@ async def handle_signin_request(request: SignInRequest):
         message = f"SIGNIN_FAIL: User {request.username} is already logged in."
     else:
         auth_manager.signin_client(request.sender, request.username)
-        message = sign_in(request.username, request.password)
+        message = signin_request(request.username, request.password)
     return {"message": message}
 
 @app.post("/signup")
 async def handle_signup_request(request: SignUpRequest):
-    message = sign_up(request.username, request.password)
+    message = signup_request(request.username, request.password)
     return {"message": message}
 
 @app.get("/clients")

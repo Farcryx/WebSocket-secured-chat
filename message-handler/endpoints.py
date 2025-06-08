@@ -2,7 +2,7 @@ import requests
 
 def get_username(sender: tuple) -> str:
     """Get username of user."""
-    url = f"http://localhost:5001/username/{sender}"
+    url = f"http://authentication:5001/username/{sender}"
     try:
         response = requests.get(url)
         response_data = response.json()
@@ -14,7 +14,7 @@ def get_username(sender: tuple) -> str:
 
 def get_clients() -> dict:
     """Get list of clients"""
-    url = "http://localhost:5001/clients"
+    url = "http://authentication:5001/clients"
     try:
         response = requests.get(url)
         response_data = response.json()
@@ -25,7 +25,7 @@ def get_clients() -> dict:
 
 def get_session_key(sender: str) -> str:
     """Get session key of user"""
-    url = f"http://localhost:5001/session_key/{sender}"
+    url = f"http://authentication:5001/session_key/{sender}"
     try:
         response = requests.get(url)
         response_data = response.json()
@@ -36,7 +36,7 @@ def get_session_key(sender: str) -> str:
 
 def get_sender_by_username(username: str) -> str:
     """Get sender by username"""
-    url = f"http://localhost:5001/sender_by_username/{username}"
+    url = f"http://authentication:5001/sender_by_username/{username}"
     try:
         response = requests.get(url)
         response_data = response.json()
@@ -47,7 +47,7 @@ def get_sender_by_username(username: str) -> str:
 
 def set_dm_recipient(sender: str, recipient: str) -> str:
     """Set direct message recipient"""
-    url = "http://localhost:5001/set_dm_recipient"
+    url = "http://authentication:5001/set_dm_recipient"
     data = {"sender": sender, "recipient": recipient}
     try:
         response = requests.post(url, json=data)
@@ -59,7 +59,7 @@ def set_dm_recipient(sender: str, recipient: str) -> str:
 
 def get_nonce(sender: str) -> str:
     """Get nonce of user"""
-    url = f"http://localhost:5001/nonce/{sender}"
+    url = f"http://authentication:5001/nonce/{sender}"
     try:
         response = requests.get(url)
         response_data = response.json()
