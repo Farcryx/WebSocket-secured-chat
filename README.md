@@ -31,3 +31,10 @@ Project uses Docker containers and whole project can be runned with a single [Do
    ```bash
    docker compose up --build
    ```
+
+## Known Security Issues
+> [!Warning]
+> 1. The communication is vurnable to Man-in-the-Middle attacks. (challange is needed during the setting the secured communication)
+> 2. Nonce or IV has now static value. The messages can be send again by the attacker to the receiver or to the server. Instead of static value it should be unique for each message.
+> 3. The session never ends. Server should cancel the session after some part of time and delete data of this session.
+> 4. Credentials data are stored in plain JSON file.
